@@ -1,0 +1,24 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: cards-service
+  data:
+    mongodb:
+      database: cardsDB
+      uri: ${MONGODB_URI:mongodb+srv://bankAdmin:grupo4ntt@bootcamp-bank.2c7fx6u.mongodb.net/bootcamp-bank?retryWrites=true&w=majority&appName=bootcamp-bank}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      customer-service:
+        baseConfig: default 
+      transaction-service:
+        baseConfig: default
+  timelimiter:
+    instances:
+      customer-service:
+        baseConfig: default
+      transaction-service:
+        baseConfig: default

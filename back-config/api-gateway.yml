@@ -1,0 +1,223 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  
+  cloud:
+    gateway:
+      routes:
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                rate-limiter: "#{@redisRateLimiter}"
+                key-resolver: "#{@ipKeyResolver}"
+        
+        - id: cards-service
+          uri: lb://cards-service
+          predicates:
+            - Path=/api/cards/**
+          filters:
+            - JwtAuthenticationGatewayFilter
+            - name: CircuitBreaker
+              args:
+                name: cards-service-cb
+                fallbackUri: forward:/fallback/cards
+
+        - id: customer-service
+          uri: lb://customer-service
+          predicates:
+            - Path=/api/customers/**
+          filters:
+            - JwtAuthenticationGatewayFilter
+            - name: CircuitBreaker
+              args:
+                name: customer-service-cb
+                fallbackUri: forward:/fallback/customers
+        
+        - id: account-service
+          uri: lb://account-service
+          predicates:
+            - Path=/api/accounts/**
+          filters:
+            - JwtAuthenticationGatewayFilter
+            - name: CircuitBreaker
+              args:
+                name: account-service-cb
+                fallbackUri: forward:/fallback/accounts
+        
+        - id: credit-service
+          uri: lb://credit-service
+          predicates:
+            - Path=/api/credits/**
+          filters:
+            - JwtAuthenticationGatewayFilter
+            - name: CircuitBreaker
+              args:
+                name: credit-service-cb
+                fallbackUri: forward:/fallback/credits
+        
+        - id: transaction-service
+          uri: lb://transaction-service
+          predicates:
+            - Path=/api/transactions/**
+          filters:
+            - JwtAuthenticationGatewayFilter
+            - name: CircuitBreaker
+              args:
+                name: transaction-service-cb
+                fallbackUri: forward:/fallback/transactions
+        
+        - id: report-service
+          uri: lb://report-service
+          predicates:
+            - Path=/api/reports/**
+          filters:
+            - JwtAuthenticationGatewayFilter
+            - name: CircuitBreaker
+              args:
+                name: report-service-cb
+                fallbackUri: forward:/fallback/reports
+      
+      # CORS Global
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+  
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    database: 0
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 10
+        max-idle: 5
+
+rate-limit:
+  replenish-rate: 10
+  burst-capacity: 20
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      cards-service-cb:
+        registerHealthIndicator: true
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 60
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 5
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 2s
+        recordExceptions:
+          - java.net.ConnectException
+          - java.util.concurrent.TimeoutException
+          - org.springframework.web.reactive.function.client.WebClientRequestException
+      
+      customer-service-cb:
+        registerHealthIndicator: true
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 60
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 5
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 2s
+      
+      account-service-cb:
+        registerHealthIndicator: true
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 60
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 5
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 2s
+      
+      credit-service-cb:
+        registerHealthIndicator: true
+        slidingWindowSize: 20
+        minimumNumberOfCalls: 10
+        failureRateThreshold: 60
+        waitDurationInOpenState: 30s
+        permittedNumberOfCallsInHalfOpenState: 5
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 2s
+      
+      transaction-service-cb:
+        registerHealthIndicator: true
+        slidingWindowSize: 15  #más sensible para transacciones
+        minimumNumberOfCalls: 8
+        failureRateThreshold: 50
+        waitDurationInOpenState: 20s
+        permittedNumberOfCallsInHalfOpenState: 3
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 1s  
+      
+      report-service-cb:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 70  
+        waitDurationInOpenState: 60s 
+        permittedNumberOfCallsInHalfOpenState: 3
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 5s  
+
+  timelimiter:
+    instances:
+      cards-service-cb:
+        timeoutDuration: 3s
+        cancelRunningFuture: true
+      customer-service-cb:
+        timeoutDuration: 2s
+        cancelRunningFuture: true
+      account-service-cb:
+        timeoutDuration: 2s
+        cancelRunningFuture: true
+      credit-service-cb:
+        timeoutDuration: 3s
+        cancelRunningFuture: true
+      transaction-service-cb:
+        timeoutDuration: 1s  
+        cancelRunningFuture: true
+      report-service-cb:
+        timeoutDuration: 10s  
+        cancelRunningFuture: true
+
+gateway:
+  security:
+    jwt:
+      excluded-paths:
+        - /api/auth/login
+        - /api/auth/register
+        - /actuator/health
+        - /fallback/**
+  
+  fallback:
+    message-template: "Service temporarily unavailable. Please try again later."
+    include-timestamp: true
+    include-path: true
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    org.springframework.cloud.circuitbreaker: DEBUG
+    org.springframework.web.reactive: INFO
+    com.bootcamp.ntt.apigateway: DEBUG
