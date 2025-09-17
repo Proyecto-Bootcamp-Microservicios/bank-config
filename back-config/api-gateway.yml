@@ -4,220 +4,203 @@ server:
 spring:
   application:
     name: api-gateway
-  
   cloud:
+    config:
+      uri: http://localhost:8888
+      fail-fast: true
+      retry:
+        initial-interval: 1000
+        max-attempts: 6
+        max-interval: 2000
+        multiplier: 1.1
     gateway:
       routes:
-        - id: auth-service
+        # Auth Service Routes
+        - id: auth-login
           uri: lb://auth-service
           predicates:
-            - Path=/api/auth/**
+            - Path=/api/auth/login
+            - Method=POST
           filters:
             - name: RequestRateLimiter
               args:
-                rate-limiter: "#{@redisRateLimiter}"
-                key-resolver: "#{@ipKeyResolver}"
-        
-        - id: cards-service
-          uri: lb://cards-service
-          predicates:
-            - Path=/api/cards/**
-          filters:
-            - JwtAuthenticationGatewayFilter
-            - name: CircuitBreaker
-              args:
-                name: cards-service-cb
-                fallbackUri: forward:/fallback/cards
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+            - RemoveRequestHeader=Cookie
 
+        - id: auth-register
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth/register
+            - Method=POST
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+            - AddRequestHeader=X-Gateway-Source, api-gateway
+
+        # Customer Service Routes (Protected)
         - id: customer-service
           uri: lb://customer-service
           predicates:
             - Path=/api/customers/**
           filters:
-            - JwtAuthenticationGatewayFilter
+            - JwtAuthenticationFilter
             - name: CircuitBreaker
               args:
-                name: customer-service-cb
-                fallbackUri: forward:/fallback/customers
-        
+                name: customer-circuit-breaker
+                fallbackUri: forward:/fallback/customer
+            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
+
+        # Account Service Routes (Protected)
         - id: account-service
           uri: lb://account-service
           predicates:
             - Path=/api/accounts/**
           filters:
-            - JwtAuthenticationGatewayFilter
+            - JwtAuthenticationFilter
             - name: CircuitBreaker
               args:
-                name: account-service-cb
-                fallbackUri: forward:/fallback/accounts
-        
+                name: account-circuit-breaker
+                fallbackUri: forward:/fallback/account
+            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
+
+        # Card Service Routes (Protected)
+        - id: card-service
+          uri: lb://card-service
+          predicates:
+            - Path=/api/cards/**
+          filters:
+            - JwtAuthenticationFilter
+            - name: CircuitBreaker
+              args:
+                name: card-circuit-breaker
+                fallbackUri: forward:/fallback/card
+            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
+
+        # Credit Service Routes (Protected)
         - id: credit-service
           uri: lb://credit-service
           predicates:
             - Path=/api/credits/**
           filters:
-            - JwtAuthenticationGatewayFilter
+            - JwtAuthenticationFilter
             - name: CircuitBreaker
               args:
-                name: credit-service-cb
-                fallbackUri: forward:/fallback/credits
-        
+                name: credit-circuit-breaker
+                fallbackUri: forward:/fallback/credit
+            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
+
+        # Transaction Service Routes (Protected)
         - id: transaction-service
           uri: lb://transaction-service
           predicates:
             - Path=/api/transactions/**
           filters:
-            - JwtAuthenticationGatewayFilter
+            - JwtAuthenticationFilter
             - name: CircuitBreaker
               args:
-                name: transaction-service-cb
-                fallbackUri: forward:/fallback/transactions
-        
-        - id: report-service
-          uri: lb://report-service
+                name: transaction-circuit-breaker
+                fallbackUri: forward:/fallback/transaction
+            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
+
+        # Reports Service Routes (Protected - Admin only)
+        - id: reports-service
+          uri: lb://reports-service
           predicates:
             - Path=/api/reports/**
           filters:
-            - JwtAuthenticationGatewayFilter
+            - JwtAuthenticationFilter
+            - RoleBasedAuthFilter=ADMIN
             - name: CircuitBreaker
               args:
-                name: report-service-cb
+                name: reports-circuit-breaker
                 fallbackUri: forward:/fallback/reports
-      
-      # CORS Global
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOriginPatterns: "*"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - PATCH
-              - OPTIONS
-            allowedHeaders: "*"
-            allowCredentials: true
-  
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    database: 0
-    timeout: 2000ms
-    lettuce:
-      pool:
-        max-active: 10
-        max-idle: 5
 
-rate-limit:
-  replenish-rate: 10
-  burst-capacity: 20
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+        - AddResponseHeader=X-Response-Time, "#{T(System).currentTimeMillis()}"
 
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, gateway, circuitbreakers
+  endpoint:
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:mySecretKey}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# Resilience4j Configuration
 resilience4j:
   circuitbreaker:
     instances:
-      cards-service-cb:
-        registerHealthIndicator: true
-        slidingWindowSize: 20
-        minimumNumberOfCalls: 10
-        failureRateThreshold: 60
-        waitDurationInOpenState: 30s
-        permittedNumberOfCallsInHalfOpenState: 5
-        slowCallRateThreshold: 100
-        slowCallDurationThreshold: 2s
-        recordExceptions:
-          - java.net.ConnectException
-          - java.util.concurrent.TimeoutException
-          - org.springframework.web.reactive.function.client.WebClientRequestException
-      
-      customer-service-cb:
-        registerHealthIndicator: true
-        slidingWindowSize: 20
-        minimumNumberOfCalls: 10
-        failureRateThreshold: 60
-        waitDurationInOpenState: 30s
-        permittedNumberOfCallsInHalfOpenState: 5
-        slowCallRateThreshold: 100
-        slowCallDurationThreshold: 2s
-      
-      account-service-cb:
-        registerHealthIndicator: true
-        slidingWindowSize: 20
-        minimumNumberOfCalls: 10
-        failureRateThreshold: 60
-        waitDurationInOpenState: 30s
-        permittedNumberOfCallsInHalfOpenState: 5
-        slowCallRateThreshold: 100
-        slowCallDurationThreshold: 2s
-      
-      credit-service-cb:
-        registerHealthIndicator: true
-        slidingWindowSize: 20
-        minimumNumberOfCalls: 10
-        failureRateThreshold: 60
-        waitDurationInOpenState: 30s
-        permittedNumberOfCallsInHalfOpenState: 5
-        slowCallRateThreshold: 100
-        slowCallDurationThreshold: 2s
-      
-      transaction-service-cb:
-        registerHealthIndicator: true
-        slidingWindowSize: 15  #más sensible para transacciones
-        minimumNumberOfCalls: 8
-        failureRateThreshold: 50
-        waitDurationInOpenState: 20s
-        permittedNumberOfCallsInHalfOpenState: 3
-        slowCallRateThreshold: 100
-        slowCallDurationThreshold: 1s  
-      
-      report-service-cb:
-        registerHealthIndicator: true
-        slidingWindowSize: 10
-        minimumNumberOfCalls: 5
-        failureRateThreshold: 70  
-        waitDurationInOpenState: 60s 
-        permittedNumberOfCallsInHalfOpenState: 3
-        slowCallRateThreshold: 100
-        slowCallDurationThreshold: 5s  
+      customer-circuit-breaker:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 5
+        automatic-transition-from-open-to-half-open-enabled: true
+        wait-duration-in-open-state: 5s
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-size: 10
+        sliding-window-type: count_based
+      account-circuit-breaker:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 5s
+      card-circuit-breaker:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 5s
+      credit-circuit-breaker:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 5s
+      transaction-circuit-breaker:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 5s
+      reports-circuit-breaker:
+        failure-rate-threshold: 50
+        minimum-number-of-calls: 5
+        wait-duration-in-open-state: 5s
 
   timelimiter:
     instances:
-      cards-service-cb:
-        timeoutDuration: 3s
-        cancelRunningFuture: true
-      customer-service-cb:
-        timeoutDuration: 2s
-        cancelRunningFuture: true
-      account-service-cb:
-        timeoutDuration: 2s
-        cancelRunningFuture: true
-      credit-service-cb:
-        timeoutDuration: 3s
-        cancelRunningFuture: true
-      transaction-service-cb:
-        timeoutDuration: 1s  
-        cancelRunningFuture: true
-      report-service-cb:
-        timeoutDuration: 10s  
-        cancelRunningFuture: true
+      default:
+        timeout-duration: 5s
 
-gateway:
-  security:
-    jwt:
-      excluded-paths:
-        - /api/auth/login
-        - /api/auth/register
-        - /actuator/health
-        - /fallback/**
-  
-  fallback:
-    message-template: "Service temporarily unavailable. Please try again later."
-    include-timestamp: true
-    include-path: true
+# CORS Configuration
+cors:
+  allowed-origins: "*"
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true
+
+# Rate Limiting (Redis required)
+redis:
+  host: ${REDIS_HOST:localhost}
+  port: ${REDIS_PORT:6379}
+  password: ${REDIS_PASSWORD:}
 
 logging:
   level:
-    org.springframework.cloud.gateway: INFO
-    org.springframework.cloud.circuitbreaker: DEBUG
-    org.springframework.web.reactive: INFO
-    com.bootcamp.ntt.apigateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty.http.client: DEBUG
