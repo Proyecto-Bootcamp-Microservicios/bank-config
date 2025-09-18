@@ -20,6 +20,15 @@ kafka:
     customer-created: customer-created-events
     transaction-notification: transaction-notification-events
 
+eureka:
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 10
+    health-check-url-path: /actuator/health
+    status-page-url-path: /actuator/info
+    instance-id: ${spring.application.name}:${random.value}
+    
 resilience4j:
   circuitbreaker:
     instances:
