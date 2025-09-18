@@ -31,7 +31,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics, gateway, circuitbreakers
+        include: health, info, metrics, gateway, circuitbreakers, routes
   endpoint:
     health:
       show-details: always
