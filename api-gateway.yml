@@ -37,7 +37,7 @@ spring:
           predicates:
             - Path=/api/v1/customers/**
           filters:
-            - JwtAuthenticationFilter
+            - JwtAuthentication
             - name: CircuitBreaker
               args:
                 name: customer-circuit-breaker
@@ -50,7 +50,7 @@ spring:
           predicates:
             - Path=/api/v1/accounts/**
           filters:
-            - JwtAuthenticationFilter
+            - JwtAuthentication
             - name: CircuitBreaker
               args:
                 name: account-circuit-breaker
@@ -63,7 +63,7 @@ spring:
           predicates:
             - Path=/api/v1/cards/**
           filters:
-            - JwtAuthenticationFilter
+            - JwtAuthentication
             - name: CircuitBreaker
               args:
                 name: card-circuit-breaker
@@ -76,7 +76,7 @@ spring:
           predicates:
             - Path=/api/v1/debit-cards/**
           filters:
-            - JwtAuthenticationFilter
+            - JwtAuthentication
             - name: CircuitBreaker
               args:
                 name: card-circuit-breaker
@@ -89,7 +89,7 @@ spring:
           predicates:
             - Path=/api/v1/credit-cards/**
           filters:
-            - JwtAuthenticationFilter
+            - JwtAuthentication
             - name: CircuitBreaker
               args:
                 name: card-circuit-breaker
@@ -102,7 +102,7 @@ spring:
           predicates:
             - Path=/api/v1/customers/**
           filters:
-            - JwtAuthenticationFilter
+            - JwtAuthentication
             - name: CircuitBreaker
               args:
                 name: card-circuit-breaker
@@ -115,7 +115,7 @@ spring:
           predicates:
             - Path=/api/v1/credits/**
           filters:
-            - JwtAuthenticationFilter
+            - JwtAuthentication
             - name: CircuitBreaker
               args:
                 name: credit-circuit-breaker
@@ -128,7 +128,7 @@ spring:
           predicates:
             - Path=/api/v1/transactions/**
           filters:
-            - JwtAuthenticationFilter
+            - JwtAuthentication
             - name: CircuitBreaker
               args:
                 name: transaction-circuit-breaker
@@ -141,8 +141,8 @@ spring:
           predicates:
             - Path=/api/v1/reports/**
           filters:
-            - JwtAuthenticationFilter
-            - RoleBasedAuthFilter=ADMIN
+            - JwtAuthentication
+            - RoleBasedAuth=ADMIN
             - name: CircuitBreaker
               args:
                 name: reports-circuit-breaker
