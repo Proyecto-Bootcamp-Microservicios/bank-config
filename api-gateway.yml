@@ -150,7 +150,7 @@ spring:
 
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
-        - AddResponseHeader=X-Response-Time, #{T(System).currentTimeMillis()}
+        - AddResponseHeader=X-Response-Time,timestamp
 
 eureka:
   client:
