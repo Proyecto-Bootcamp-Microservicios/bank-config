@@ -8,22 +8,17 @@ spring:
     mongodb:
       database: userDB
       uri: ${MONGODB_URI:mongodb+srv://bankAdmin:grupo4ntt@bootcamp-bank.2c7fx6u.mongodb.net/bootcamp-bank?retryWrites=true&w=majority&appName=bootcamp-bank}
-      #authentication-database: admin
-      #username: admin
-      #password: password
+  kafka:
+    consumer:
+      group-id: auth-service-group
+      properties:
+        spring.json.trusted.packages: "com.bootcamp.ntt.auth.dto,com.bootcamp.ntt.customer.dto"
 
 kafka:
   topics:
     user-created: user-created-events
     customer-created: customer-created-events
     transaction-notification: transaction-notification-events
-
-spring:
-  kafka:
-    consumer:
-      group-id: auth-service-group
-      properties:
-        spring.json.trusted.packages: "com.bootcamp.ntt.auth.dto,com.bootcamp.ntt.customer.dto"
 
 resilience4j:
   circuitbreaker:
