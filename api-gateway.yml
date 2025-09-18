@@ -1,6 +1,7 @@
 spring:
   application:
     name: api-gateway
+  cloud:
     gateway:
       routes:
         # Auth Service Routes
@@ -21,7 +22,7 @@ spring:
         - id: auth-register
           uri: lb://auth-service
           predicates:
-            - Path=/api/auth/register
+            - Path=/api/v1/auth/register
             - Method=POST
           filters:
             - name: RequestRateLimiter
@@ -95,11 +96,11 @@ spring:
                 fallbackUri: forward:/fallback/card
             - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
 
-        # Customer endpoint (dentro del card service)
+        # Customer endpoint of card-service
         - id: card-service-customer
           uri: lb://card-service
           predicates:
-            - Path=/api/v1/customer/**
+            - Path=/api/v1/customers/**
           filters:
             - JwtAuthenticationFilter
             - name: CircuitBreaker
@@ -160,12 +161,10 @@ eureka:
   instance:
     prefer-ip-address: true
 
-# JWT Configuration
 jwt:
   secret: ${JWT_SECRET:mySuperSecretKeyThatIsAtLeast512BitsLongForHS512AlgorithmAndMeetsSecurityRequirements123456789ABC}
   expiration: ${JWT_EXPIRATION:86400000}
 
-# Resilience4j Configuration
 resilience4j:
   circuitbreaker:
     instances:
@@ -210,7 +209,7 @@ cors:
   allowed-headers: "*"
   allow-credentials: true
 
-# Rate Limiting (Redis required)
+# Rate Limiting 
 redis:
   host: ${REDIS_HOST:localhost}
   port: ${REDIS_PORT:6379}
