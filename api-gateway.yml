@@ -42,7 +42,6 @@ spring:
               args:
                 name: customer-circuit-breaker
                 fallbackUri: forward:/fallback/customer
-            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
 
         # Account Service Routes (Protected)
         - id: account-service
@@ -55,7 +54,6 @@ spring:
               args:
                 name: account-circuit-breaker
                 fallbackUri: forward:/fallback/account
-            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
 
         # Cards endpoint
         - id: card-service-cards
@@ -68,7 +66,6 @@ spring:
               args:
                 name: card-circuit-breaker
                 fallbackUri: forward:/fallback/card
-            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
 
         # Debit Cards endpoint
         - id: card-service-debit-cards
@@ -81,7 +78,6 @@ spring:
               args:
                 name: card-circuit-breaker
                 fallbackUri: forward:/fallback/card
-            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
 
         # Credit Cards endpoint
         - id: card-service-credit-cards
@@ -94,7 +90,6 @@ spring:
               args:
                 name: card-circuit-breaker
                 fallbackUri: forward:/fallback/card
-            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
 
         # Customer endpoint of card-service
         - id: card-service-customer
@@ -107,7 +102,6 @@ spring:
               args:
                 name: card-circuit-breaker
                 fallbackUri: forward:/fallback/card
-            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
 
         # Credit Service Routes (Protected)
         - id: credit-service
@@ -120,7 +114,6 @@ spring:
               args:
                 name: credit-circuit-breaker
                 fallbackUri: forward:/fallback/credit
-            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
 
         # Transaction Service Routes (Protected)
         - id: transaction-service
@@ -133,7 +126,6 @@ spring:
               args:
                 name: transaction-circuit-breaker
                 fallbackUri: forward:/fallback/transaction
-            - AddRequestHeader=X-Customer-Id, "#{@jwtTokenUtil.extractCustomerId(exchange.request.headers.getFirst('Authorization'))}"
 
         # Reports Service Routes (Protected - Admin only)
         - id: reports-service
