@@ -9,6 +9,10 @@ spring:
       database: creditDB
       uri: ${MONGODB_URI:mongodb+srv://bankAdmin:grupo4ntt@bootcamp-bank.2c7fx6u.mongodb.net/bootcamp-bank?retryWrites=true&w=majority&appName=bootcamp-bank}
 
+services:
+  customer:
+    service-name: lb://customer-service
+    
 resilience4j:
   circuitbreaker:
     instances:
