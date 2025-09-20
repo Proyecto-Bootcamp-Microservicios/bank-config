@@ -11,8 +11,8 @@ spring:
 
 services:
   customer:
-    service-name: customer-service
-    
+    service-name: lb://customer-service
+
 resilience4j:
   circuitbreaker:
     instances:
