@@ -11,7 +11,7 @@ spring:
 
 services:
   card:
-    service-name: lb://card-service/api/v1
+    service-name: lb://card-service
   customer:
     service-name: lb://customer-service
     
