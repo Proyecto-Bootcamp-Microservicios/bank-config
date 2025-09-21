@@ -11,7 +11,7 @@ spring:
 
 services:
   card:
-    service-name: card-service
+    service-name: lb://card-service
   customer:
     service-name: lb://customer-service
     
