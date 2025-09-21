@@ -8,6 +8,16 @@ spring:
     mongodb:
       database: cardsDB
       uri: ${MONGODB_URI:mongodb+srv://bankAdmin:grupo4ntt@bootcamp-bank.2c7fx6u.mongodb.net/bootcamp-bank?retryWrites=true&w=majority&appName=bootcamp-bank}
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    timeout: 5000ms
+    
+cache:
+  redis:
+    time-to-live: 300000
+    cache-null-values: false
 
 services:
   customer:
