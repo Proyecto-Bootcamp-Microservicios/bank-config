@@ -22,6 +22,8 @@ cache:
 services:
   customer:
     service-name: lb://customer-service
+  transaction:
+    service-name: lb://transaction-service
 
 resilience4j:
   circuitbreaker:
