@@ -29,6 +29,10 @@ eureka:
     status-page-url-path: /actuator/info
     instance-id: ${spring.application.name}:${random.value}
     
+services:
+  customer:
+    service-name: lb://customer-service
+    
 resilience4j:
   circuitbreaker:
     instances:
