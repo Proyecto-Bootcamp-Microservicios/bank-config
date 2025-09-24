@@ -22,8 +22,8 @@ cache:
 services:
   customer:
     service-name: lb://customer-service
-  customer:
-    service-name: lb://customer-service
+  account:
+    service-name: lb://account-service
   transaction:
     service-name: lb://transaction-service
 
